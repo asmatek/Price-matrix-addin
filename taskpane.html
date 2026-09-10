@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Matrix Price Finder</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+  <link rel="stylesheet" href="taskpane.css" />
+
+  <!-- Office.js -->
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+  <!-- SheetJS: reads .xlsx / .xlsm / .xls / .csv -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="ms-font-m">
+  <header>
+    <h1>Matrix Price Finder</h1>
+    <p class="subtitle">Scans supplier matrix workbooks attached to this email and looks up electricity prices.</p>
+  </header>
+
+  <section id="search-form">
+    <label for="zip">Zip code <span class="hint">(resolves utility + zone if the file has a zip map)</span></label>
+    <input type="text" id="zip" placeholder="e.g. 77020" inputmode="numeric" />
+
+    <label for="utility">Utility <span class="hint">(optional if zip resolves it — e.g. CenterPoint, Oncor, AEP Central)</span></label>
+    <input type="text" id="utility" placeholder="e.g. CenterPoint / CNP" />
+
+    <label for="customerClass">Customer class</label>
+    <select id="customerClass">
+      <option value="any">Any</option>
+      <option value="residential" selected>Residential</option>
+      <option value="commercial">Commercial</option>
+    </select>
+
+    <label for="usageTier">Usage tier</label>
+    <select id="usageTier">
+      <option value="any">Any</option>
+      <option value="low" selected>Low</option>
+      <option value="medium">Medium</option>
+      <option value="high">High</option>
+    </select>
+
+    <label for="annualUsage">Annual usage (kWh) <span class="hint">(commercial only — picks the right usage bracket)</span></label>
+    <input type="number" id="annualUsage" placeholder="optional" />
+
+    <label for="startMonth">Start month <span class="hint">(defaults to earliest available)</span></label>
+    <input type="month" id="startMonth" />
+
+    <label for="terms">Terms wanted <span class="hint">(months, comma-separated)</span></label>
+    <input type="text" id="terms" placeholder="e.g. 12,24,36" value="12,24,36" />
+
+    <button id="searchBtn" type="button" class="primary-button">Scan email &amp; find prices</button>
+  </section>
+
+  <section id="status" class="hidden"></section>
+
+  <section id="results" class="hidden">
+    <h2>Matches</h2>
+    <div id="resultsList"></div>
+  </section>
+
+  <section id="sourcesFound" class="hidden">
+    <h2>Files scanned</h2>
+    <ul id="sourcesList"></ul>
+  </section>
+
+  <script src="taskpane.js"></script>
+</body>
+</html>
