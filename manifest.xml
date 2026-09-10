@@ -12,12 +12,12 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Matrix Price Finder"/>
   <Description DefaultValue="Scans supplier emails (Excel/CSV attachments, PDF attachments, and email body tables) and looks up a price from a matrix based on the row/column values you provide."/>
-  <IconUrl DefaultValue="https://localhost:3000/assets/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/icon-80.png"/>
-  <SupportUrl DefaultValue="https://localhost:3000"/>
+  <IconUrl DefaultValue="https://asmatek.github.io/Price-matrix-addin/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://asmatek.github.io/Price-matrix-addin/assets/icon-80.png"/>
+  <SupportUrl DefaultValue="https://asmatek.github.io/Price-matrix-addin"/>
 
   <AppDomains>
-    <AppDomain>https://localhost:3000</AppDomain>
+    <AppDomain>https://asmatek.github.io</AppDomain>
   </AppDomains>
 
   <Hosts>
@@ -33,7 +33,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://localhost:3000/taskpane.html"/>
+        <SourceLocation DefaultValue="https://asmatek.github.io/Price-matrix-addin/taskpane.html"/>
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -86,13 +86,13 @@
 
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://asmatek.github.io/Price-matrix-addin/assets/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://asmatek.github.io/Price-matrix-addin/assets/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://asmatek.github.io/Price-matrix-addin/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/>
+        <bt:Url id="Commands.Url" DefaultValue="https://asmatek.github.io/Price-matrix-addin/commands.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://asmatek.github.io/Price-matrix-addin/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="Matrix Prices"/>
