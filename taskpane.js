@@ -20,6 +20,7 @@
 
 Office.onReady(() => {
   document.getElementById("searchBtn").addEventListener("click", runSearch);
+  initQuoteControls();
 });
 
 /* ------------------------------------------------------------------ *
@@ -852,11 +853,225 @@ function formatMoney(v) {
   return Number(v).toFixed(5).replace(/0+$/, "").replace(/\.$/, "");
 }
 
+/* ------------------------------------------------------------------ *
+ * Results rendering + quote builder
+ *
+ * Click a price pill (or tick a row in "All available terms") to add that
+ * term to the quote. Enter a margin and every selected term gets it added.
+ * "Copy quote" puts a real table on the clipboard (pastes as a table into
+ * an Outlook email or Word, and as columns into Excel).
+ * ------------------------------------------------------------------ */
+
+const quoteState = {
+  groups: [], // groups currently shown
+  selected: new Set(), // "groupIndex|term"
+};
+
+const DISCLOSURE_LINES = [
+  "Rates are estimates and subject to change based on final enrollment.",
+  "Pricing is all-inclusive, including Nodal, and $0 meter fee.",
+];
+
+// Matrix files mix units: the ERCOT sheet is in cents/kWh (e.g. 6.816),
+// others use $/kWh (e.g. 0.0682). Any price under 1 is treated as $/kWh.
+function toCents(price) {
+  return price < 1 ? price * 100 : price;
+}
+
+function formatCents(c) {
+  let s = Number(c).toFixed(3);
+  s = s.replace(/0+$/, "");
+  if (/\.$/.test(s)) s += "0";
+  return s;
+}
+
+function groupLabel(g) {
+  return (
+    g.utilityRaw + " " + g.zoneRaw + " — " + (g.customerClass || "unknown") +
+    (g.tier ? " (" + g.tier + ")" : "") +
+    (g.startDate ? " — starts " + g.startDate.toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "")
+  );
+}
+
+function selKey(gi, term) {
+  return gi + "|" + term;
+}
+
+function toggleTerm(gi, term) {
+  const k = selKey(gi, term);
+  if (quoteState.selected.has(k)) quoteState.selected.delete(k);
+  else quoteState.selected.add(k);
+  refreshSelectionUI();
+}
+
+function refreshSelectionUI() {
+  document.querySelectorAll("[data-sel]").forEach((el) => {
+    const on = quoteState.selected.has(el.getAttribute("data-sel"));
+    el.classList.toggle("selected", on);
+    const cb = el.querySelector("input[type=checkbox]");
+    if (cb) cb.checked = on;
+  });
+  renderQuote();
+}
+
+function getMarginCents() {
+  const raw = document.getElementById("marginInput").value.trim();
+  const v = raw === "" ? 0 : parseFloat(raw);
+  return Number.isFinite(v) ? v : 0;
+}
+
+// Selected terms as rows, sorted by group then term, margin applied.
+function buildQuoteRows() {
+  const margin = getMarginCents();
+  const rows = [];
+  quoteState.selected.forEach((k) => {
+    const [giStr, termStr] = k.split("|");
+    const gi = parseInt(giStr, 10);
+    const term = parseInt(termStr, 10);
+    const g = quoteState.groups[gi];
+    if (!g) return;
+    const base = g.terms.get(term);
+    if (base === undefined) return;
+    const baseCents = toCents(base);
+    rows.push({ gi, term, label: groupLabel(g), baseCents, finalCents: baseCents + margin });
+  });
+  rows.sort((a, b) => a.gi - b.gi || a.term - b.term);
+  return rows;
+}
+
+function renderQuote() {
+  const section = document.getElementById("quoteSection");
+  const rows = buildQuoteRows();
+  if (rows.length === 0) {
+    section.classList.add("hidden");
+    return;
+  }
+  section.classList.remove("hidden");
+
+  const multi = new Set(rows.map((r) => r.gi)).size > 1;
+  const host = document.getElementById("quoteTableHost");
+  host.innerHTML = "";
+
+  if (!multi) {
+    const cap = document.createElement("div");
+    cap.className = "quote-caption";
+    cap.textContent = rows[0].label;
+    host.appendChild(cap);
+  }
+
+  const table = document.createElement("table");
+  table.id = "quoteTable";
+  table.setAttribute("style", "border-collapse:collapse;font-family:Segoe UI,Arial,sans-serif;font-size:13px;");
+  const cellStyle = "border:1px solid #c8c6c4;padding:6px 12px;";
+  const headStyle = cellStyle + "background:#f3f2f1;font-weight:600;text-align:left;";
+
+  const headers = (multi ? ["Plan"] : []).concat(["Term", "Rate"]);
+  const thead = document.createElement("tr");
+  headers.forEach((h) => {
+    const th = document.createElement("th");
+    th.setAttribute("style", headStyle);
+    th.textContent = h;
+    thead.appendChild(th);
+  });
+  table.appendChild(thead);
+
+  rows.forEach((r) => {
+    const tr = document.createElement("tr");
+    const cells = (multi ? [r.label] : []).concat([r.term + " months", formatCents(r.finalCents) + "¢/kWh"]);
+    cells.forEach((c) => {
+      const td = document.createElement("td");
+      td.setAttribute("style", cellStyle);
+      td.textContent = c;
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+  host.appendChild(table);
+
+  const notes = document.createElement("div");
+  notes.id = "quoteNotes";
+  notes.setAttribute("style", "font-family:Segoe UI,Arial,sans-serif;font-size:11px;color:#605e5c;margin-top:6px;");
+  DISCLOSURE_LINES.forEach((line) => {
+    const p = document.createElement("div");
+    p.textContent = line;
+    notes.appendChild(p);
+  });
+  host.appendChild(notes);
+
+  document.getElementById("quoteCount").textContent =
+    rows.length + " term" + (rows.length === 1 ? "" : "s") + " selected";
+}
+
+function quotePlainText() {
+  const rows = buildQuoteRows();
+  const multi = new Set(rows.map((r) => r.gi)).size > 1;
+  const lines = [];
+  if (!multi && rows.length) lines.push(rows[0].label, "");
+  lines.push((multi ? "Plan\t" : "") + "Term\tRate");
+  rows.forEach((r) => {
+    lines.push((multi ? r.label + "\t" : "") + r.term + " months\t" + formatCents(r.finalCents) + "¢/kWh");
+  });
+  lines.push("");
+  DISCLOSURE_LINES.forEach((l) => lines.push(l));
+  return lines.join("\r\n");
+}
+
+async function copyQuote() {
+  const status = document.getElementById("copyStatus");
+  const host = document.getElementById("quoteTableHost");
+  if (!document.getElementById("quoteTable")) return;
+
+  const html = host.innerHTML;
+  const text = quotePlainText();
+
+  // Preferred: write both a rich HTML table and plain tab-separated text.
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([text], { type: "text/plain" }),
+        }),
+      ]);
+      flashCopied(status, "Copied — paste into your email");
+      return;
+    }
+  } catch (e) {
+    console.warn("Async clipboard failed, falling back", e);
+  }
+
+  // Fallback for task panes that block the async clipboard API: select the
+  // rendered table and use the legacy copy command (still copies as a table).
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(host);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    const ok = document.execCommand("copy");
+    sel.removeAllRanges();
+    flashCopied(status, ok ? "Copied — paste into your email" : "Copy failed — select the table and press Ctrl+C", !ok);
+  } catch (e) {
+    flashCopied(status, "Copy failed — select the table and press Ctrl+C", true);
+  }
+}
+
+function flashCopied(el, msg, isError) {
+  el.textContent = msg;
+  el.className = "copy-status" + (isError ? " error" : "");
+  setTimeout(() => {
+    el.textContent = "";
+  }, 4000);
+}
+
 function renderResults(groups, requestedTerms) {
   const container = document.getElementById("resultsList");
   container.innerHTML = "";
+  quoteState.groups = groups;
+  quoteState.selected = new Set();
+  document.getElementById("quoteSection").classList.add("hidden");
 
-  groups.forEach((g) => {
+  groups.forEach((g, gi) => {
     const sortedTermPrices = Array.from(g.terms.entries())
       .map(([term, price]) => ({ term, price }))
       .sort((a, b) => a.term - b.term);
@@ -867,10 +1082,7 @@ function renderResults(groups, requestedTerms) {
     card.className = "match-card";
 
     const title = document.createElement("h3");
-    title.textContent =
-      g.utilityRaw + " — " + g.zoneRaw + " — " + (g.customerClass || "unknown") +
-      (g.tier ? " (" + g.tier + ")" : "") +
-      (g.startDate ? " — starts " + g.startDate.toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "");
+    title.textContent = groupLabel(g);
     card.appendChild(title);
 
     if (g.bracketLabel) {
@@ -880,18 +1092,23 @@ function renderResults(groups, requestedTerms) {
       card.appendChild(bracket);
     }
 
+    const hint = document.createElement("div");
+    hint.className = "match-meta";
+    hint.textContent = "Click a term to add it to your quote.";
+    card.appendChild(hint);
+
     const pillRow = document.createElement("div");
     pillRow.className = "term-grid";
     const shown = new Set();
     requestedTerms.forEach((t) => {
-      pillRow.appendChild(makeTermPill(t, priceByTerm.get(t), sweetSpots.has(t)));
+      pillRow.appendChild(makeTermPill(gi, t, priceByTerm.get(t), sweetSpots.has(t)));
       shown.add(t);
     });
     Array.from(sweetSpots)
       .filter((t) => !shown.has(t))
       .sort((a, b) => a - b)
       .forEach((t) => {
-        pillRow.appendChild(makeTermPill(t, priceByTerm.get(t), true));
+        pillRow.appendChild(makeTermPill(gi, t, priceByTerm.get(t), true));
       });
     card.appendChild(pillRow);
 
@@ -904,13 +1121,24 @@ function renderResults(groups, requestedTerms) {
       const table = document.createElement("table");
       sortedTermPrices.forEach(({ term, price }) => {
         const tr = document.createElement("tr");
-        if (sweetSpots.has(term)) tr.className = "sweet";
+        tr.className = "pick-row" + (sweetSpots.has(term) ? " sweet" : "");
+        tr.setAttribute("data-sel", selKey(gi, term));
+        const tdCb = document.createElement("td");
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        tdCb.appendChild(cb);
         const tdTerm = document.createElement("td");
         tdTerm.textContent = term + " mo";
         const tdPrice = document.createElement("td");
         tdPrice.textContent = formatMoney(price);
+        tr.appendChild(tdCb);
         tr.appendChild(tdTerm);
         tr.appendChild(tdPrice);
+        tr.addEventListener("click", (ev) => {
+          // Clicking the checkbox itself toggles once via this handler.
+          if (ev.target === cb) ev.preventDefault();
+          toggleTerm(gi, term);
+        });
         table.appendChild(tr);
       });
       details.appendChild(table);
@@ -928,16 +1156,38 @@ function renderResults(groups, requestedTerms) {
   document.getElementById("results").classList.remove("hidden");
 }
 
-function makeTermPill(term, price, isSweet) {
+function makeTermPill(gi, term, price, isSweet) {
+  const missing = price === undefined;
   const pill = document.createElement("div");
-  pill.className = "term-pill" + (price === undefined ? " missing" : "") + (isSweet && price !== undefined ? " sweet" : "");
+  pill.className = "term-pill" + (missing ? " missing" : " pickable") + (isSweet && !missing ? " sweet" : "");
   const label = document.createElement("div");
   label.className = "term-label";
   label.textContent = term + " mo";
   const val = document.createElement("div");
   val.className = "term-price";
-  val.textContent = price === undefined ? "not found" : formatMoney(price);
+  val.textContent = missing ? "not found" : formatMoney(price);
   pill.appendChild(label);
   pill.appendChild(val);
+  if (!missing) {
+    pill.setAttribute("data-sel", selKey(gi, term));
+    pill.setAttribute("role", "button");
+    pill.setAttribute("tabindex", "0");
+    pill.addEventListener("click", () => toggleTerm(gi, term));
+    pill.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        toggleTerm(gi, term);
+      }
+    });
+  }
   return pill;
+}
+
+function initQuoteControls() {
+  document.getElementById("marginInput").addEventListener("input", renderQuote);
+  document.getElementById("copyQuoteBtn").addEventListener("click", copyQuote);
+  document.getElementById("clearQuoteBtn").addEventListener("click", () => {
+    quoteState.selected = new Set();
+    refreshSelectionUI();
+  });
 }

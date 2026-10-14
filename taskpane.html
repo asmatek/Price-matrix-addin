@@ -59,6 +59,18 @@
     <div id="resultsList"></div>
   </section>
 
+  <section id="quoteSection" class="hidden">
+    <h2>Your quote <span id="quoteCount" class="hint"></span></h2>
+    <label for="marginInput">Margin to add to every selected term <span class="hint">(¢/kWh)</span></label>
+    <input type="number" id="marginInput" step="0.001" min="0" placeholder="e.g. 0.5" />
+    <div id="quoteTableHost"></div>
+    <div class="quote-actions">
+      <button id="copyQuoteBtn" type="button" class="primary-button">Copy quote as table</button>
+      <button id="clearQuoteBtn" type="button" class="link-button">Clear selection</button>
+    </div>
+    <div id="copyStatus" class="copy-status"></div>
+  </section>
+
   <section id="sourcesFound" class="hidden">
     <h2>Files scanned</h2>
     <ul id="sourcesList"></ul>

@@ -127,3 +127,40 @@ details.all-terms summary { cursor: pointer; color: #1f56a3; }
 details.all-terms table { border-collapse: collapse; margin-top: 6px; width: 100%; }
 details.all-terms td { padding: 2px 6px; border-bottom: 1px solid #f3f2f1; }
 details.all-terms tr.sweet td { background: #f1faf1; font-weight: 600; }
+
+/* ---- Quote builder ---- */
+.term-pill.pickable { cursor: pointer; user-select: none; }
+.term-pill.pickable:hover { border-color: #1f56a3; }
+.term-pill.selected { background: #1f56a3; border-color: #1f56a3; }
+.term-pill.selected .term-label,
+.term-pill.selected .term-price,
+.term-pill.sweet.selected::after { color: #fff; }
+
+details.all-terms tr.pick-row { cursor: pointer; }
+details.all-terms tr.pick-row.selected td { background: #dce8f7; }
+details.all-terms tr.pick-row.sweet.selected td { background: #cfe8cf; }
+
+#quoteSection {
+  margin-top: 18px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #c8c6c4;
+  border-left: 4px solid #1f56a3;
+  border-radius: 3px;
+}
+#quoteSection h2 { font-size: 14px; margin: 0 0 8px 0; }
+#quoteSection label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+#quoteSection input[type="number"] {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #c8c6c4;
+  border-radius: 2px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+#quoteTableHost { overflow-x: auto; }
+.quote-caption { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.quote-actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.quote-actions .primary-button { margin-top: 0; }
+.copy-status { margin-top: 8px; font-size: 12px; color: #107c10; min-height: 16px; }
+.copy-status.error { color: #a4262c; }
