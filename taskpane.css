@@ -164,3 +164,18 @@ details.all-terms tr.pick-row.sweet.selected td { background: #cfe8cf; }
 .quote-actions .primary-button { margin-top: 0; }
 .copy-status { margin-top: 8px; font-size: 12px; color: #107c10; min-height: 16px; }
 .copy-status.error { color: #a4262c; }
+
+/* ---- Unit toggle ---- */
+.unit-toggle { display: flex; margin-bottom: 12px; }
+.unit-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #c8c6c4;
+  background: #fff;
+  color: #1b1b1b;
+  font-size: 13px;
+  cursor: pointer;
+}
+.unit-btn:first-child { border-radius: 3px 0 0 3px; }
+.unit-btn:last-child { border-radius: 0 3px 3px 0; border-left: none; }
+.unit-btn.active { background: #1f56a3; border-color: #1f56a3; color: #fff; font-weight: 600; }

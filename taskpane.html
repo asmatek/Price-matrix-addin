@@ -61,7 +61,12 @@
 
   <section id="quoteSection" class="hidden">
     <h2>Your quote <span id="quoteCount" class="hint"></span></h2>
-    <label for="marginInput">Margin to add to every selected term <span class="hint">(¢/kWh)</span></label>
+    <label>Quote in</label>
+    <div class="unit-toggle" role="group" aria-label="Quote unit">
+      <button id="unitCents" type="button" class="unit-btn active">¢/kWh</button>
+      <button id="unitDollars" type="button" class="unit-btn">$/kWh</button>
+    </div>
+    <label for="marginInput">Margin to add to every selected term <span id="marginUnitHint" class="hint">(¢/kWh)</span></label>
     <input type="number" id="marginInput" step="0.001" min="0" placeholder="e.g. 0.5" />
     <div id="quoteTableHost"></div>
     <div class="quote-actions">

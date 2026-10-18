@@ -869,7 +869,7 @@ const quoteState = {
 
 const DISCLOSURE_LINES = [
   "Rates are estimates and subject to change based on final enrollment.",
-  "Pricing is all-inclusive, including Nodal, and $0 meter fee.",
+  "Pricing is all-inclusive, including Nodal, and $0 monthly meter fee.",
 ];
 
 // Matrix files mix units: the ERCOT sheet is in cents/kWh (e.g. 6.816),
@@ -883,6 +883,29 @@ function formatCents(c) {
   s = s.replace(/0+$/, "");
   if (/\.$/.test(s)) s += "0";
   return s;
+}
+
+// Quote unit: "cents" (¢/kWh) or "dollars" ($/kWh). Internally everything
+// stays in cents; this only changes how the margin is read and how the
+// quote is displayed/copied.
+let quoteUnit = "cents";
+try {
+  const saved = localStorage.getItem("mpf_quoteUnit");
+  if (saved === "cents" || saved === "dollars") quoteUnit = saved;
+} catch (e) {
+  /* storage unavailable — default to cents */
+}
+
+function formatDollars(c) {
+  let s = (Number(c) / 100).toFixed(5);
+  s = s.replace(/0+$/, "");
+  const dec = (s.split(".")[1] || "").length;
+  if (dec < 4) s += "0".repeat(4 - dec);
+  return s;
+}
+
+function formatRate(c) {
+  return quoteUnit === "dollars" ? "$" + formatDollars(c) + "/kWh" : formatCents(c) + "¢/kWh";
 }
 
 function groupLabel(g) {
@@ -917,7 +940,37 @@ function refreshSelectionUI() {
 function getMarginCents() {
   const raw = document.getElementById("marginInput").value.trim();
   const v = raw === "" ? 0 : parseFloat(raw);
-  return Number.isFinite(v) ? v : 0;
+  if (!Number.isFinite(v)) return 0;
+  return quoteUnit === "dollars" ? v * 100 : v;
+}
+
+function updateUnitUI() {
+  const dollars = quoteUnit === "dollars";
+  document.getElementById("unitCents").classList.toggle("active", !dollars);
+  document.getElementById("unitDollars").classList.toggle("active", dollars);
+  document.getElementById("marginUnitHint").textContent = dollars ? "($/kWh)" : "(¢/kWh)";
+  document.getElementById("marginInput").placeholder = dollars ? "e.g. 0.005" : "e.g. 0.5";
+  document.getElementById("marginInput").step = dollars ? "0.0001" : "0.001";
+}
+
+function setQuoteUnit(next) {
+  if (next === quoteUnit) return;
+  // Convert the margin already typed so the actual margin doesn't change.
+  const input = document.getElementById("marginInput");
+  const raw = input.value.trim();
+  if (raw !== "" && Number.isFinite(parseFloat(raw))) {
+    const v = parseFloat(raw);
+    const converted = next === "dollars" ? v / 100 : v * 100;
+    input.value = String(Math.round(converted * 1e6) / 1e6);
+  }
+  quoteUnit = next;
+  try {
+    localStorage.setItem("mpf_quoteUnit", next);
+  } catch (e) {
+    /* ignore */
+  }
+  updateUnitUI();
+  renderQuote();
 }
 
 // Selected terms as rows, sorted by group then term, margin applied.
@@ -977,7 +1030,7 @@ function renderQuote() {
 
   rows.forEach((r) => {
     const tr = document.createElement("tr");
-    const cells = (multi ? [r.label] : []).concat([r.term + " months", formatCents(r.finalCents) + "¢/kWh"]);
+    const cells = (multi ? [r.label] : []).concat([r.term + " months", formatRate(r.finalCents)]);
     cells.forEach((c) => {
       const td = document.createElement("td");
       td.setAttribute("style", cellStyle);
@@ -1009,7 +1062,7 @@ function quotePlainText() {
   if (!multi && rows.length) lines.push(rows[0].label, "");
   lines.push((multi ? "Plan\t" : "") + "Term\tRate");
   rows.forEach((r) => {
-    lines.push((multi ? r.label + "\t" : "") + r.term + " months\t" + formatCents(r.finalCents) + "¢/kWh");
+    lines.push((multi ? r.label + "\t" : "") + r.term + " months\t" + formatRate(r.finalCents));
   });
   lines.push("");
   DISCLOSURE_LINES.forEach((l) => lines.push(l));
@@ -1185,6 +1238,9 @@ function makeTermPill(gi, term, price, isSweet) {
 
 function initQuoteControls() {
   document.getElementById("marginInput").addEventListener("input", renderQuote);
+  document.getElementById("unitCents").addEventListener("click", () => setQuoteUnit("cents"));
+  document.getElementById("unitDollars").addEventListener("click", () => setQuoteUnit("dollars"));
+  updateUnitUI();
   document.getElementById("copyQuoteBtn").addEventListener("click", copyQuote);
   document.getElementById("clearQuoteBtn").addEventListener("click", () => {
     quoteState.selected = new Set();
